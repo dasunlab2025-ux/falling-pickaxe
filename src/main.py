@@ -150,9 +150,6 @@ async def handle_youtube_poll():
                  pickaxe_authors.add(author)
                  print(f"Added {author} to Pickaxe queue (netherite_pickaxe)")
 
-    # print the queue counts (optional, for debugging)
-    # print(f"Queues: TNT={len(tnt_queue)}, Superchat TNT={len(tnt_superchat_queue)}, Fast/Slow={len(fast_slow_queue)}, Big={len(big_queue)}, Pickaxe={len(pickaxe_queue)}, MegaTNT={len(mega_tnt_queue)}")
-
 def start_event_loop(loop):
     asyncio.set_event_loop(loop)
     loop.run_forever()
@@ -174,9 +171,9 @@ def game():
     space = pymunk.Space()
     space.gravity = (0, 1000)  # (x, y) - down is positive y
 
-    # Create a resizable window
+    # Create a FULLSCREEN window
     screen_size = (window_width, window_height)
-    screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
+    screen = pygame.display.set_mode(screen_size, pygame.FULLSCREEN | pygame.SCALED)
     scaled_surface = pygame.Surface(screen_size).convert()
     pygame.display.set_caption("Falling Pickaxe")
     # set icon
@@ -283,7 +280,7 @@ def game():
                     new_height = int(new_width * (16 / 9))
 
                 window_width, window_height = new_width, new_height
-                screen = pygame.display.set_mode((window_width, window_height), pygame.RESIZABLE)
+                screen = pygame.display.set_mode((window_width, window_height), pygame.FULLSCREEN | pygame.SCALED)
                 scaled_surface = pygame.Surface((window_width, window_height)).convert()
 
         # ++++++++++++++++++  UPDATE ++++++++++++++++++
