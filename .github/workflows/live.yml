@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       stream_id:
-        description: 'YouTube ලින්ක් එක හෝ ID එක පේස්ට් කරන්න'
+        description: 'YouTube Link'
         required: true
-        default: ''
 
 jobs:
   stream:
@@ -20,6 +19,10 @@ jobs:
         with:
           python-version: '3.10'
 
+      # පද්ධතියේ ෆයිල් තියෙන තැන් පරීක්ෂා කිරීම (Debug)
+      - name: Check Files Structure
+        run: ls -R src/assets/
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -32,23 +35,19 @@ jobs:
           YT_API_KEY: ${{ secrets.YT_API_KEY }}
           INPUT_ID: ${{ github.event.inputs.stream_id }}
         run: |
-          # 1. Audio Drivers පණ ගැන්වීම
+          # Audio & Display drivers
           pulseaudio -D --exit-idle-time=-1
-          
-          # 2. Virtual Display (1080x1920)
           Xvfb :99 -screen 0 1080x1920x24 &
           sleep 5
           export DISPLAY=:99
           
-          # 3. Game එක පණ ගැන්වීම
+          # Game එක background එකේ run කිරීම
           python src/main.py --stream_id "$INPUT_ID" --api_key "$YT_API_KEY" &
-          sleep 25
           
-          # 4. FFmpeg හරහා සේරම එකතු කර ස්ට්‍රීම් කිරීම
-          # -t 4920: පැය 1යි විනාඩි 22කින් ලයිව් එක නවත්වයි
-          # overlay: PNG එක වීඩියෝ එක උඩින් තබයි
-          # amix: ගේම් සද්දය සහ MP3 එක මික්ස් කරයි
+          # Game එක load වීමට කාලය ලබා දීම
+          sleep 30
           
+          # FFmpeg Streaming (Paths updated based on your screenshot)
           ffmpeg -thread_queue_size 1024 -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 \
           -f pulse -thread_queue_size 1024 -i default \
           -i src/assets/overlay.png \
