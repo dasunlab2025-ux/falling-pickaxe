@@ -19,10 +19,6 @@ jobs:
         with:
           python-version: '3.10'
 
-      # පද්ධතියේ ෆයිල් තියෙන තැන් පරීක්ෂා කිරීම (Debug)
-      - name: Check Files Structure
-        run: ls -R src/assets/
-
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -35,19 +31,16 @@ jobs:
           YT_API_KEY: ${{ secrets.YT_API_KEY }}
           INPUT_ID: ${{ github.event.inputs.stream_id }}
         run: |
-          # Audio & Display drivers
           pulseaudio -D --exit-idle-time=-1
           Xvfb :99 -screen 0 1080x1920x24 &
           sleep 5
           export DISPLAY=:99
           
-          # Game එක background එකේ run කිරීම
+          # Game එක පණ ගැන්වීම
           python src/main.py --stream_id "$INPUT_ID" --api_key "$YT_API_KEY" &
-          
-          # Game එක load වීමට කාලය ලබා දීම
           sleep 30
           
-          # FFmpeg Streaming (Paths updated based on your screenshot)
+          # FFmpeg Streaming (මෙහි paths ඔයාගේ Capture.PNG එකට අනුව සකසා ඇත)
           ffmpeg -thread_queue_size 1024 -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 \
           -f pulse -thread_queue_size 1024 -i default \
           -i src/assets/overlay.png \
