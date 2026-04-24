@@ -2,6 +2,11 @@ name: YouTube Live Stream
 
 on:
   workflow_dispatch:
+    inputs:
+      stream_id:
+        description: 'YouTube Live Stream ID (e.g., ABCDEFG123)'
+        required: true
+        default: ''
 
 jobs:
   stream:
@@ -24,19 +29,20 @@ jobs:
       - name: Run Game and Stream to YouTube
         env:
           STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
+          INPUT_STREAM_ID: ${{ github.event.inputs.stream_id }}
         run: |
-          # 1. Virtual Audio (බොරු ස්පීකරය) ඔන් කිරීම
+          # 1. Virtual Audio (බොරු ස්පීකරය)
           pulseaudio -D --exit-idle-time=-1
           
-          # 2. Virtual Display (බොරු මොනිටරය) Vertical 1080x1920 ලෙස සැකසීම
+          # 2. Virtual Display (බොරු මොනිටරය)
           Xvfb :99 -screen 0 1080x1920x24 &
           export DISPLAY=:99
           
-          # 3. Game එක background එකේ run කිරීම
-          python src/main.py &
+          # 3. Game එක run කිරීම (වෙබ් එකෙන් එන ID එක පරාමිතියක් ලෙස යවයි)
+          python src/main.py --stream_id $INPUT_STREAM_ID &
           
-          # 4. Game එක ලෝඩ් වෙන්න තත්පර 10ක් රැඳී සිටීම
+          # 4. ලෝඩ් වෙන්න තත්පර 10ක්
           sleep 10
           
-          # 5. FFmpeg හරහා ස්ක්‍රීන් එක සහ සද්දය YouTube එකට යැවීම (OBS වෙනුවට)
+          # 5. FFmpeg හරහා YouTube යැවීම
           ffmpeg -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 -f pulse -i default -c:v libx264 -preset ultrafast -b:v 2500k -c:a aac -ar 44100 -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
