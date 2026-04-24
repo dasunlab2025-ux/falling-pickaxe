@@ -160,8 +160,9 @@ asyncio_loop = asyncio.new_event_loop()
 threading.Thread(target=start_event_loop, args=(asyncio_loop,), daemon=True).start()
 
 def game():
-    window_width = int(INTERNAL_WIDTH / 2)
-    window_height = int(INTERNAL_HEIGHT / 2)
+    # කෙලින්ම අපේ ලයිව් ස්ට්‍රීම් එකේ සයිස් එක දෙමු
+    window_width = 1080
+    window_height = 1920
 
     # Initialize pygame
     pygame.init()
@@ -171,9 +172,9 @@ def game():
     space = pymunk.Space()
     space.gravity = (0, 1000)  # (x, y) - down is positive y
 
-    # Create a FULLSCREEN window
+    # Create the window with exact size
     screen_size = (window_width, window_height)
-    screen = pygame.display.set_mode(screen_size, pygame.FULLSCREEN | pygame.SCALED)
+    screen = pygame.display.set_mode(screen_size)
     scaled_surface = pygame.Surface(screen_size).convert()
     pygame.display.set_caption("Falling Pickaxe")
     # set icon
