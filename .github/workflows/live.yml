@@ -2,10 +2,6 @@ name: YouTube Live Stream
 
 on:
   workflow_dispatch:
-    inputs:
-      stream_id:
-        description: 'YouTube ලින්ක් එක හෝ ID එක පේස්ට් කරන්න'
-        required: true
 
 jobs:
   stream:
@@ -28,24 +24,24 @@ jobs:
       - name: Run Game and Stream to YouTube
         env:
           STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
-          INPUT_ID: ${{ github.event.inputs.stream_id }}
+          YT_API_KEY: ${{ secrets.YT_API_KEY }}
         run: |
-          # 1. Virtual Audio (බොරු ස්පීකරය) ඔන් කිරීම
+          # 1. Audio Drivers පණ ගැන්වීම
           pulseaudio -D --exit-idle-time=-1
           
-          # 2. Virtual Display (බොරු මොනිටරය)
+          # 2. Virtual Display පණ ගැන්වීම
           Xvfb :99 -screen 0 1080x1920x24 &
           export DISPLAY=:99
           
-          # 3. Game එක background එකේ run කිරීම
-          python src/main.py --stream_id "$INPUT_ID" &
+          # 3. Game එක පණ ගැන්වීම 
+          # (Arguments නැතුව රන් වෙන නිසා කෙලින්ම config.json එකේ තියෙන ID එක ගනියි)
+          python src/main.py &
           
-          # 4. Game එක load වීමට කාලය ලබා දීම
+          # 4. ලෝඩ් වීමට කාලය ලබා දීම
           sleep 25
           
           # 5. FFmpeg හරහා Streaming
-          # -t 4920: හරියටම පැය 1යි විනාඩි 22කින් (4920s) ලයිව් එක නවත්වයි
-          # -stream_loop -1: සින්දුව දිගටම Loop වීමට
+          # -t 4920: පැය 1යි විනාඩි 22කින් (4920s) ලයිව් එක ඉබේම නවතී
           # amix: ගේම් සද්දය සහ මියුසික් එක මික්ස් කිරීමට
           
           ffmpeg -thread_queue_size 1024 -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 \
