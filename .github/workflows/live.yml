@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       stream_id:
-        description: 'YouTube Link'
+        description: 'YouTube ලින්ක් එක හෝ ID එක පේස්ට් කරන්න'
         required: true
 
 jobs:
@@ -19,34 +19,40 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies
+      - name: Install Dependencies & Virtual Drivers
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg xvfb pulseaudio
           pip install -r requirements.txt
 
-      - name: Start Streaming
+      - name: Run Game and Stream to YouTube
         env:
           STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
-          YT_API_KEY: ${{ secrets.YT_API_KEY }}
           INPUT_ID: ${{ github.event.inputs.stream_id }}
         run: |
+          # 1. Virtual Audio (බොරු ස්පීකරය) ඔන් කිරීම
           pulseaudio -D --exit-idle-time=-1
+          
+          # 2. Virtual Display (බොරු මොනිටරය)
           Xvfb :99 -screen 0 1080x1920x24 &
-          sleep 5
           export DISPLAY=:99
           
-          # Game එක පණ ගැන්වීම
-          python src/main.py --stream_id "$INPUT_ID" --api_key "$YT_API_KEY" &
-          sleep 30
+          # 3. Game එක background එකේ run කිරීම
+          python src/main.py --stream_id "$INPUT_ID" &
           
-          # FFmpeg Streaming (මෙහි paths ඔයාගේ Capture.PNG එකට අනුව සකසා ඇත)
+          # 4. Game එක load වීමට කාලය ලබා දීම
+          sleep 25
+          
+          # 5. FFmpeg හරහා Streaming
+          # -t 4920: හරියටම පැය 1යි විනාඩි 22කින් (4920s) ලයිව් එක නවත්වයි
+          # -stream_loop -1: සින්දුව දිගටම Loop වීමට
+          # amix: ගේම් සද්දය සහ මියුසික් එක මික්ස් කිරීමට
+          
           ffmpeg -thread_queue_size 1024 -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 \
           -f pulse -thread_queue_size 1024 -i default \
-          -i src/assets/overlay.png \
           -stream_loop -1 -i src/assets/background.mp3 \
-          -filter_complex "[0:v][2:v]overlay=0:0[v]; [1:a][3:a]amix=inputs=2:duration=first[a]" \
-          -map "[v]" -map "[a]" \
+          -filter_complex "[1:a][2:a]amix=inputs=2:duration=first[a]" \
+          -map 0:v -map "[a]" \
           -t 4920 \
           -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
           -pix_fmt yuv420p -g 60 -c:a aac -ar 44100 -b:a 128k -f flv \
