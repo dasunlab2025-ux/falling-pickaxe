@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       stream_id:
-        description: 'YouTube Live Stream ID (e.g., ABCDEFG123)'
+        description: 'YouTube Live Stream ID or Full Link (e.g., https://www.youtube.com/watch?v=...) '
         required: true
         default: ''
 
@@ -31,18 +31,22 @@ jobs:
           STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
           INPUT_STREAM_ID: ${{ github.event.inputs.stream_id }}
         run: |
-          # 1. Virtual Audio (බොරු ස්පීකරය)
+          # 1. Virtual Audio (බොරු ස්පීකරය) පණ ගැන්වීම
           pulseaudio -D --exit-idle-time=-1
           
-          # 2. Virtual Display (බොරු මොනිටරය)
+          # 2. Virtual Display (බොරු මොනිටරය) සකස් කිරීම
           Xvfb :99 -screen 0 1080x1920x24 &
           export DISPLAY=:99
           
-          # 3. Game එක run කිරීම (වෙබ් එකෙන් එන ID එක පරාමිතියක් ලෙස යවයි)
-          python src/main.py --stream_id $INPUT_STREAM_ID &
+          # 3. Game එක background එකේ run කිරීම
+          python src/main.py --stream_id "$INPUT_STREAM_ID" &
           
-          # 4. ලෝඩ් වෙන්න තත්පර 10ක්
-          sleep 10
+          # 4. ගේම් එක සම්පූර්ණයෙන් ලෝඩ් වීමට තත්පර 15ක් රැඳී සිටීම
+          sleep 15
           
-          # 5. FFmpeg හරහා YouTube යැවීම
-          ffmpeg -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 -f pulse -i default -c:v libx264 -preset ultrafast -b:v 2500k -c:a aac -ar 44100 -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
+          # 5. FFmpeg හරහා ඉහළ FPS අගයකින් YouTube වෙත දත්ත යැවීම
+          ffmpeg -thread_queue_size 512 -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 \
+          -f pulse -thread_queue_size 512 -i default \
+          -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
+          -pix_fmt yuv420p -g 60 -c:a aac -ar 44100 -b:a 128k -f flv \
+          "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
