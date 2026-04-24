@@ -2,6 +2,11 @@ name: YouTube Live Stream
 
 on:
   workflow_dispatch:
+    inputs:
+      stream_id:
+        description: 'YouTube ලින්ක් එක හෝ ID එක පේස්ට් කරන්න'
+        required: true
+        default: ''
 
 jobs:
   stream:
@@ -15,28 +20,42 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies & Virtual Drivers
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg xvfb pulseaudio
           pip install -r requirements.txt
 
-      - name: Run Game and Stream to YouTube
+      - name: Start Streaming
         env:
           STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
+          YT_API_KEY: ${{ secrets.YT_API_KEY }}
+          INPUT_ID: ${{ github.event.inputs.stream_id }}
         run: |
-          # 1. Virtual Audio (බොරු ස්පීකරය) ඔන් කිරීම
+          # 1. Audio Drivers පණ ගැන්වීම
           pulseaudio -D --exit-idle-time=-1
           
-          # 2. Virtual Display (බොරු මොනිටරය) Vertical 1080x1920 ලෙස සැකසීම
+          # 2. Virtual Display (1080x1920)
           Xvfb :99 -screen 0 1080x1920x24 &
+          sleep 5
           export DISPLAY=:99
           
-          # 3. Game එක background එකේ run කිරීම
-          python src/main.py &
+          # 3. Game එක පණ ගැන්වීම
+          python src/main.py --stream_id "$INPUT_ID" --api_key "$YT_API_KEY" &
+          sleep 25
           
-          # 4. Game එක ලෝඩ් වෙන්න තත්පර 10ක් රැඳී සිටීම
-          sleep 10
+          # 4. FFmpeg හරහා සේරම එකතු කර ස්ට්‍රීම් කිරීම
+          # -t 4920: පැය 1යි විනාඩි 22කින් ලයිව් එක නවත්වයි
+          # overlay: PNG එක වීඩියෝ එක උඩින් තබයි
+          # amix: ගේම් සද්දය සහ MP3 එක මික්ස් කරයි
           
-          # 5. FFmpeg හරහා ස්ක්‍රීන් එක සහ සද්දය YouTube එකට යැවීම (OBS වෙනුවට)
-          ffmpeg -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 -f pulse -i default -c:v libx264 -preset ultrafast -b:v 2500k -c:a aac -ar 44100 -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
+          ffmpeg -thread_queue_size 1024 -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 \
+          -f pulse -thread_queue_size 1024 -i default \
+          -i src/assets/overlay.png \
+          -stream_loop -1 -i src/assets/background.mp3 \
+          -filter_complex "[0:v][2:v]overlay=0:0[v]; [1:a][3:a]amix=inputs=2:duration=first[a]" \
+          -map "[v]" -map "[a]" \
+          -t 4920 \
+          -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
+          -pix_fmt yuv420p -g 60 -c:a aac -ar 44100 -b:a 128k -f flv \
+          "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
