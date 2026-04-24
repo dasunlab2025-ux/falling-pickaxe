@@ -1,0 +1,27 @@
+name: YouTube Live Stream
+
+on:
+  workflow_dispatch:
+
+jobs:
+  stream:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          choco install ffmpeg -y
+
+      - name: Run PowerShell Script
+        env:
+          STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
+        shell: powershell
+        run: .\scripts\run.ps1
