@@ -21,12 +21,22 @@ jobs:
           sudo apt-get install -y ffmpeg xvfb pulseaudio
           pip install -r requirements.txt
 
-      - name: Run Game with Virtual Display and Audio
+      - name: Run Game and Stream to YouTube
         env:
           STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
         run: |
           # 1. Virtual Audio (බොරු ස්පීකරය) ඔන් කිරීම
           pulseaudio -D --exit-idle-time=-1
           
-          # 2. Virtual Display (බොරු මොනිටරය) සමඟ කෝඩ් එක රන් කිරීම
-          xvfb-run -s "-screen 0 1080x1920x24" python src/main.py
+          # 2. Virtual Display (බොරු මොනිටරය) Vertical 1080x1920 ලෙස සැකසීම
+          Xvfb :99 -screen 0 1080x1920x24 &
+          export DISPLAY=:99
+          
+          # 3. Game එක background එකේ run කිරීම
+          python src/main.py &
+          
+          # 4. Game එක ලෝඩ් වෙන්න තත්පර 10ක් රැඳී සිටීම
+          sleep 10
+          
+          # 5. FFmpeg හරහා ස්ක්‍රීන් එක සහ සද්දය YouTube එකට යැවීම (OBS වෙනුවට)
+          ffmpeg -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 -f pulse -i default -c:v libx264 -preset ultrafast -b:v 2500k -c:a aac -ar 44100 -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
