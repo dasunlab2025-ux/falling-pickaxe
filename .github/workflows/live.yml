@@ -2,11 +2,6 @@ name: YouTube Live Stream
 
 on:
   workflow_dispatch:
-    inputs:
-      stream_id:
-        description: 'YouTube Live Stream ID or Full Link'
-        required: true
-        default: ''
 
 jobs:
   stream:
@@ -20,32 +15,28 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies
+      - name: Install Dependencies & Virtual Drivers
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg xvfb pulseaudio
           pip install -r requirements.txt
 
-      - name: Start Streaming
+      - name: Run Game and Stream to YouTube
         env:
           STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
-          INPUT_STREAM_ID: ${{ github.event.inputs.stream_id }}
         run: |
-          # 1. Virtual Audio පණ ගැන්වීම
+          # 1. Virtual Audio (බොරු ස්පීකරය) ඔන් කිරීම
           pulseaudio -D --exit-idle-time=-1
           
-          # 2. Virtual Display පණ ගන්වා තත්පර 5ක් රැඳී සිටීම
+          # 2. Virtual Display (බොරු මොනිටරය) Vertical 1080x1920 ලෙස සැකසීම
           Xvfb :99 -screen 0 1080x1920x24 &
-          sleep 5
           export DISPLAY=:99
           
-          # 3. Game එක background එකේ run කිරීම සහ තත්පර 20ක් රැඳී සිටීම
-          python src/main.py --stream_id "$INPUT_STREAM_ID" &
-          sleep 20
+          # 3. Game එක background එකේ run කිරීම
+          python src/main.py &
           
-          # 4. FFmpeg ලයිව් එක පටන් ගැනීම
-          ffmpeg -thread_queue_size 1024 -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 \
-          -f pulse -thread_queue_size 1024 -i default \
-          -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
-          -pix_fmt yuv420p -g 60 -c:a aac -ar 44100 -b:a 128k -f flv \
-          "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
+          # 4. Game එක ලෝඩ් වෙන්න තත්පර 10ක් රැඳී සිටීම
+          sleep 10
+          
+          # 5. FFmpeg හරහා ස්ක්‍රීන් එක සහ සද්දය YouTube එකට යැවීම (OBS වෙනුවට)
+          ffmpeg -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 -f pulse -i default -c:v libx264 -preset ultrafast -b:v 2500k -c:a aac -ar 44100 -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
