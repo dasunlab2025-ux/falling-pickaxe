@@ -5,7 +5,7 @@ on:
 
 jobs:
   stream:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -15,13 +15,18 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies
+      - name: Install Dependencies & Virtual Drivers
         run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg xvfb pulseaudio
           pip install -r requirements.txt
-          choco install ffmpeg -y
 
-      - name: Run PowerShell Script
+      - name: Run Game with Virtual Display and Audio
         env:
           STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
-        shell: powershell
-        run: .\scripts\run.ps1
+        run: |
+          # 1. Virtual Audio (බොරු ස්පීකරය) ඔන් කිරීම
+          pulseaudio -D --exit-idle-time=-1
+          
+          # 2. Virtual Display (බොරු මොනිටරය) සමඟ කෝඩ් එක රන් කිරීම
+          xvfb-run -s "-screen 0 1080x1920x24" python src/main.py
