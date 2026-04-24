@@ -270,18 +270,6 @@ def game():
             if event.type == pygame.QUIT:  # Close window event
                 running = False
                 user_quit = True
-            elif event.type == pygame.VIDEORESIZE:  # Window resize event
-                new_width, new_height = event.w, event.h
-
-                # Maintain 9:16 aspect ratio
-                if new_width / 9 > new_height / 16:
-                    new_width = int(new_height * (9 / 16))
-                else:
-                    new_height = int(new_width * (16 / 9))
-
-                window_width, window_height = new_width, new_height
-                screen = pygame.display.set_mode((window_width, window_height), pygame.FULLSCREEN | pygame.SCALED)
-                scaled_surface = pygame.Surface((window_width, window_height)).convert()
 
         # ++++++++++++++++++  UPDATE ++++++++++++++++++
         # Determine which chunks are visible
